@@ -1,4 +1,4 @@
-"""Signal-level plotting helpers (Part 1)."""
+"""Signal plotting helpers (Part 1)."""
 
 from __future__ import annotations
 
