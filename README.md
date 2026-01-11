@@ -38,7 +38,6 @@ Sampling rates and defaults live in `src/lab5/constants.py`:
 4. Select the desired `.mat` files and units, then run the notebook cells.
 5. Use `save_figure()` to write outputs to `plots/final/`.
 
-For protocol questions and manual verification steps, see `AGENTS.md`.
 
 ## Protocol answers (Parts 2-3)
 Part 2 (waveforms; see `plots/final/part2_ch20_stand_walk_compare_n80_seed0_fs40000_uV.png` and `plots/final/part2_ch01_ohad_sagi_compare_n80_seed0_fs40000_uV.png`):
