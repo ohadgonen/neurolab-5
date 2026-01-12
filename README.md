@@ -1,7 +1,11 @@
 # Lab 5 - Extracellular Recordings
 
 ## Overview
-This repo contains analysis code and a notebook report for Lab 5 extracellular recordings. The notebook `lab5.ipynb` is the runner/report, and all reusable logic lives in `src/lab5/` as closed Python functions.
+This repo contains analysis code and a notebook report for Lab 5 extracellular recordings.
+
+- `lab5.ipynb` is the main runner used to generate figures and summary statistics.
+- `src/lab5/` contains the reusable analysis functions (no notebook-only logic).
+- `plots/final/` contains the final figures used in the report.
 
 ## Project layout
 - `lab5.ipynb`: report + figure generation (imports from `src/lab5/`).
@@ -32,24 +36,43 @@ Sampling rates and defaults live in `src/lab5/constants.py`:
 - LFP sampling rate: `FS_LFP = 1_000`.
 
 ## How to run
-1. Ensure a Python environment with `numpy`, `scipy`, and `matplotlib`.
-2. Open `lab5.ipynb`.
-3. In the first cell, import helpers and call `apply_style()`.
-4. Select the desired `.mat` files and units, then run the notebook cells.
-5. Use `save_figure()` to write outputs to `plots/final/`.
+1. Create/use a Python environment with `numpy`, `scipy`, and `matplotlib` (a repo-local venv works well for VS Code):
+   - `python3 -m venv .venv && .venv/bin/python -m pip install -U pip`
+   - `.venv/bin/python -m pip install numpy scipy matplotlib ipykernel`
+2. Open `lab5.ipynb` in VS Code and select the `.venv` interpreter/kernel.
+3. Run the notebook cells to regenerate figures into `plots/final/`.
 
+If Matplotlib cache warnings appear, run with a writable config dir:
+- `MPLCONFIGDIR=.mplconfig MPLBACKEND=Agg ...`
 
-## Protocol answers (Parts 2-3)
-Part 2 (waveforms; see `plots/final/part2_ch20_stand_walk_compare_n80_seed0_fs40000_uV.png` and `plots/final/part2_ch01_ohad_sagi_compare_n80_seed0_fs40000_uV.png`):
-- Individual waveforms cluster tightly with moderate amplitude spread; the mean waveform captures the central shape well.
-- Stand vs Walk on Ch20 (Carmel): waveform shape and timing are highly similar; Walk shows a slightly deeper negative trough with comparable repolarization.
-- Ohad vs Sagi on Ch01 (Stand): overall shape is consistent across sorters; Sagi shows slightly larger peak-to-peak amplitude and broader variability.
+## Parts 2–3 report logic (what/why)
+### Part 2 — Spike waveforms (same neuron?)
+The protocol asks to compare spike waveforms between conditions and between different sorters (“same neuron?”). A practical issue is that unit labels (`a/b/c`) are not guaranteed to match between sorters, even when the same neuron is present.
 
-Part 3 (firing rates; bin size = 0.2 s unless noted):
-- Bin-size demo (`plots/final/part3_bin_demo_SPK20a_bins_0p05_0p2_1p0_5p0_fs40000.png`): 0.05 s is too spiky/noisy, 1-5 s oversmooths, 0.2 s balances resolution and stability.
-- Stand vs Walk (Ch20 SPK20a; `plots/final/part3_SPK20a_stand_walk_bin0p2_fs40000.png`): mean stand = 4.816 spikes/s, mean walk = 5.843 spikes/s, mean diff (stand - walk) = -1.027 spikes/s, Mann-Whitney p = 6.03e-10 (stats in `plots/final/part3_stats.csv`). Histogram of walk - stand differences is right-shifted (`plots/final/part3_SPK20a_walk_minus_stand_hist_bin0p2_fs40000.png`).
-- Ohad vs Sagi (Ch01 SPK01a, Stand; `plots/final/part3_SPK01a_ohad_sagi_bin0p2_fs40000.png`): mean Ohad = 2.913 spikes/s, mean Sagi = 4.015 spikes/s, mean diff (Ohad - Sagi) = -1.102 spikes/s, Mann-Whitney p = 2.08e-13. Histogram of Sagi - Ohad differences is right-shifted (`plots/final/part3_SPK01a_sagi_minus_ohad_hist_bin0p2_fs40000.png`).
-- Within-condition traces show no obvious monotonic drift; Walk has more frequent higher-rate bins than Stand.
+We therefore generate:
+- **Condition comparison (same recording context)** using the *dominant* unit (most spikes) in each condition file:
+  - `plots/final/part2_ch20_stand_walk_compare_n80_fs40000_uV.png`
+  - Rationale: within a file, “dominant unit” is a stable, single-unit representative without pooling different units.
+- **People/sorter comparison** using a *matched pair* chosen by maximum correlation of the **mean waveform** across the available units:
+  - `plots/final/part2_ch01_ohad_sagi_bestmatch_n80_fs40000_uV.png`
+  - Rationale: avoids incorrect “same label ⇒ same neuron” assumptions and directly targets waveform similarity required by the protocol.
+
+Implementation notes:
+- Waveforms are normalized to `(n_samples, n_spikes)` (`ensure_waveforms_2d`), aligned with timestamps (`align_spike_times`), and converted to µV when needed (`convert_waveforms_to_uv`).
+- Sampling of 80 traces is random by design (non-deterministic); the mean waveform is computed from all spikes.
+
+### Part 3 — Firing rates (binning + statistics)
+We compute firing rate in **non-overlapping bins** and compare per-bin rate samples statistically (Mann–Whitney by default), as requested in the protocol.
+
+Figures used in the report:
+- **Bin-size demo** (visualization uses non-overlapping bars to avoid overlap artifacts):
+  - `plots/final/part3_bin_demo_SPK20a_bins_0p05_0p2_1p0_5p0_fs40000.png`
+- **Stand vs Walk (SPK20a)** combined trace+hist:
+  - `plots/final/part3_SPK20a_stand_walk_combo_bin0p2_fs40000.png`
+- **Sorter comparison** uses a matched pair (by waveform similarity) for a fair “same neuron” firing-rate comparison:
+  - `plots/final/part3_ohad_SPK01a_sagi_SPK01b_combo_bin0p2_fs40000.png`
+- Summary stats:
+  - `plots/final/part3_stats.csv` (includes `unit_key_a`/`unit_key_b`, `mean_a`/`mean_b`, `pvalue`, etc.)
 
 ## Function reference (brief)
 ### `src/lab5/io_mat.py`
@@ -69,7 +92,7 @@ Part 3 (firing rates; bin size = 0.2 s unless noted):
 - `align_spike_times(spike_times_s, waveforms, ...)`: sort/filter spike times and keep waveform alignment.
 - `convert_waveforms_to_uv(waveforms, ...)`: convert waveform amplitudes to microvolts when needed.
 - `mask_by_intervals(spike_times_s, intervals)`: boolean mask for spikes inside time intervals.
-- `sample_waveforms(waveforms, n, seed=0)`: sample waveform columns without replacement.
+- `sample_waveforms(waveforms, n, seed=None)`: sample waveform columns without replacement.
 - `plotSpikes(waveforms, ...)`: plot sampled waveforms with an overlaid mean waveform.
 
 ### `src/lab5/rates.py`
