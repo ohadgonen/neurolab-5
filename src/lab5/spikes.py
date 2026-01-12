@@ -7,7 +7,7 @@ from typing import Iterable, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .constants import DEFAULT_SEED, FS_SPIKE
+from .constants import FS_SPIKE
 from .plot_style import ALPHA_LIGHT, COLORS, LABELS, LINEWIDTH_THICK, LINEWIDTH_THIN
 
 
@@ -146,14 +146,14 @@ def mask_by_intervals(
 def sample_waveforms(
     waveforms: np.ndarray,
     n: int,
-    seed: int = DEFAULT_SEED,
+    seed: int | None = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Sample waveform columns uniformly without replacement."""
     n_spikes = waveforms.shape[1]
     if n_spikes <= n:
         idx = np.arange(n_spikes)
         return waveforms, idx
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng() if seed is None else np.random.default_rng(seed)
     idx = rng.choice(n_spikes, size=n, replace=False)
     return waveforms[:, idx], idx
 
@@ -168,7 +168,7 @@ def plotSpikes(
     waveforms: np.ndarray,
     *,
     n: int = 80,
-    seed: int = DEFAULT_SEED,
+    seed: int | None = None,
     fs: float = FS_SPIKE,
     ax: plt.Axes | None = None,
     title: str | None = None,
@@ -208,4 +208,3 @@ def plotSpikes(
     if ylim is not None:
         ax.set_ylim(ylim)
     return fig, ax
-
